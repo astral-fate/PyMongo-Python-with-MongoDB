@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MongoDB Interactive Course</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .course-container {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+    }
+
+    .course-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .course-header h1 {
+      font-size: 24px;
+      margin: 0;
+    }
+
+    .course-body {
+      text-align: left;
+    }
+
+    .course-body h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .course-body p {
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .course-body pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+    }
+
+    .course-body button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .course-body button:hover {
+      background-color: #0056b3;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .feedback.correct {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .feedback.incorrect {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="course-container">
+    <div class="course-header">
+      <h1>MongoDB Interactive Course</h1>
+    </div>
+    <div class="course-body">
+      <h2 id="course-title"></h2>
+      <p id="course-content"></p>
+      <pre id="course-code"><code></code></pre>
+      <div id="course-options">
+        <!-- Options will be dynamically inserted here -->
+      </div>
+      <div id="course-feedback" class="feedback hidden">
+        <p id="feedback-text"></p>
+      </div>
+      <button id="next-lesson" class="hidden">Next Lesson</button>
+    </div>
+  </div>
+
+  <script>
+    const courseData = [
+      {
+        title: "Understanding MongoDB Filters",
+        content: "MongoDB filters are used to query documents in a collection. They can include various operators like $gt, $lt, $gte, $lte, and $or.",
+        code: '{$or: [{"day": {$gt: 12, $lt: 15}}, {"hour": 56.5}]}',
+        options: [
+          'day <= 15 and day >= 12 or hour = 56.5',
+          '(day <= 15 and day > 12) or hour = 56.5',
+          'day <= 15 or day > 12 or hour = 56.5',
+          'None of the above'
+        ],
+        correct: 1,
+        explanation: "The correct interpretation of the filter is that it matches documents where the day is greater than 12 and less than or equal to 15, or the hour is exactly 56.5."
+      },
+      {
+        title: "Valid MongoDB Filters",
+        content: "Not all MongoDB filters are valid. Some may contain syntax errors or incorrect usage of operators.",
+        code: '{ "dno": {$gte:14,$lte:16} }',
+        options: [
+          '{ "dno": {$gte:14,$lte:16} }',
+          '{ $and:[{"dno":14},{salary:7.5}} ]',
+          '{ $or:[{"dno":{$gte:14,$lte:16}},{salary:7.5}} ]',
+          'None of the above'
+        ],
+        correct: 1,
+        explanation: "The second option is invalid due to incorrect syntax."
+      },
+      {
+        title: "JSON Document Validation",
+        content: "JSON documents must follow a specific format. Duplicate keys and incorrect data types can make a JSON document invalid.",
+        code: `{
+  "fname": "Justin",
+  "lname": "Mark",
+  "ssn": "11341102",
+  "salary": 4070.00,
+  "superssn": "1117600",
+  "phone": 12345,
+  "phone": 7998710
+}`,
+        options: [
+          'Correct',
+          'Not correct'
+        ],
+        correct: 1,
+        explanation: "The JSON document is not valid because it contains duplicate keys ('phone')."
+      }
+    ];
+
+    let currentLesson = 0;
+    let score = 0;
+
+    const courseTitleElement = document.getElementById('course-title');
+    const courseContentElement = document.getElementById('course-content');
+    const courseCodeElement = document.getElementById('course-code');
+    const courseOptionsElement = document.getElementById('course-options');
+    const courseFeedbackElement = document.getElementById('course-feedback');
+    const feedbackTextElement = document.getElementById('feedback-text');
+    const nextLessonButton = document.getElementById('next-lesson');
+
+    function loadLesson() {
+      const lesson = courseData[currentLesson];
+      courseTitleElement.textContent = lesson.title;
+      courseContentElement.textContent = lesson.content;
+      courseCodeElement.textContent = lesson.code;
+
+      courseOptionsElement.innerHTML = '';
+      lesson.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.classList.add('option-button');
+        button.textContent = option;
+        button.addEventListener('click', () => checkAnswer(index));
+        courseOptionsElement.appendChild(button);
+      });
+
+      courseFeedbackElement.classList.add('hidden');
+      nextLessonButton.classList.add('hidden');
+    }
+
+    function checkAnswer(selectedIndex) {
+      const lesson = courseData[currentLesson];
+      const optionButtons = document.querySelectorAll('.option-button');
+
+      optionButtons.forEach((button) => {
+        button.disabled = true;
+      });
+
+      optionButtons.forEach((button, index) => {
+        if (index === lesson.correct) {
+          button.classList.add('correct');
+        } else if (index === selectedIndex) {
+          button.classList.add('incorrect');
+        }
+      });
+
+      courseFeedbackElement.classList.remove('hidden');
+      if (selectedIndex === lesson.correct) {
+        courseFeedbackElement.classList.add('correct');
+        feedbackTextElement.textContent = `Correct! ${lesson.explanation}`;
+        score++;
+      } else {
+        courseFeedbackElement.classList.add('incorrect');
+        feedbackTextElement.textContent = `Incorrect. ${lesson.explanation}`;
+      }
+
+      nextLessonButton.classList.remove('hidden');
+    }
+
+    nextLessonButton.addEventListener('click', () => {
+      currentLesson++;
+      if (currentLesson < courseData.length) {
+        loadLesson();
+      } else {
+        alert(`Course complete! Your score is ${score}/${courseData.length}.`);
+        currentLesson = 0;
+        score = 0;
+        loadLesson();
+      }
+    });
+
+    loadLesson();
+  </script>
+</body>
+</html>
